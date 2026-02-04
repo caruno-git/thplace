@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Карта мыслей</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.google.com/recaptcha/enterprise.js?render=6LcKk_4rAAAAAAoqKhPTx5XY0KH4sutXBRWfmElz" async
+        defer></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #60a5fa;
+            --surface: rgba(30, 41, 59, 0.7);
+            --surface-blur: 16px;
+            --text-main: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border: rgba(255, 255, 255, 0.1);
+            --radius: 20px;
+            --shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+            --bg-dark: #0f172a;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        #app-container,
+        #map {
+            width: 100vw;
+            height: 100dvh;
+            overflow: hidden;
+            background-color: var(--bg-dark);
+            /* Fixes white squares on load */
+            transition: background-color 0.3s;
+        }
+
+        .app-title {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            background: var(--surface);
+            backdrop-filter: blur(var(--surface-blur));
+            -webkit-backdrop-filter: blur(var(--surface-blur));
+            padding: 10px 20px;
+            border-radius: 999px;
+            box-shadow: var(--shadow);
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-main);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .app-title svg {
+            width: 20px;
+            height: 20px;
+            color: var(--primary);
+        }
+
+        #user-status {
+            position: fixed;
+            bottom: 24px;
+            left: 16px;
+            background: var(--surface);
+            backdrop-filter: blur(var(--surface-blur));
+            -webkit-backdrop-filter: blur(var(--surface-blur));
+            padding: 6px;
+            border-radius: 999px;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            max-width: calc(100vw - 80px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        #user-status button {
+            padding: 8px 20px;
+            border-radius: 999px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--primary);
+            color: white;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        #user-status button:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        #user-status span {
+            padding: 0 12px;
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #user-status #logoutBtn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            box-shadow: none;
+            padding: 8px 16px;
+        }
+
+        .geolocation-btn {
+            position: fixed;
+            bottom: 24px;
+            right: 16px;
+            background: var(--surface);
+            backdrop-filter: blur(var(--surface-blur));
+            -webkit-backdrop-filter: blur(var(--surface-blur));
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .theme-btn {
+            position: fixed;
+            bottom: 80px;
+            right: 16px;
+            background: var(--surface);
+            backdrop-filter: blur(var(--surface-blur));
+            -webkit-backdrop-filter: blur(var(--surface-blur));
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: all 0.2s;
+            color: var(--text-main);
+        }
+
+        .theme-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .theme-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        .geolocation-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .geolocation-btn svg {
+            width: 22px;
+            height: 22px;
+            fill: var(--primary);
+        }
+
+        .popup-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 1999;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .popup-backdrop.active {
+            display: block;
+            opacity: 1;
+        }
+
+        .modal-window {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -48%) scale(0.96);
+            background: #1e293b;
+            width: 90%;
+            max-width: 380px;
+            padding: 32px 24px 24px 24px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-window.active {
+            display: block;
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 30px;
+            height: 30px;
+            background: #334155;
+            border-radius: 50%;
+            border: none;
+            font-size: 20px;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 10;
+            line-height: 1;
+            padding-bottom: 2px;
+        }
+
+        .close-btn:hover {
+            background: #475569;
+            color: white;
+            transform: rotate(90deg);
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.2s;
+            color: var(--text-main);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: none;
+            margin-bottom: 16px;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            background: #1e293b;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+            color: white;
+            /* Ensure text is visible */
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: var(--text-main);
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .auth-tabs {
+            display: flex;
+            background: #0f172a;
+            padding: 4px;
+            border-radius: 14px;
+            margin-bottom: 24px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-secondary);
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+
+        .auth-tab.active {
+            background: #334155;
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            margin: 20px 0;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .auth-divider span {
+            padding: 0 10px;
+        }
+
+        .google-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            border: 1px solid var(--border);
+            background: #1e293b;
+            color: var(--text-main);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            transition: background 0.2s;
+        }
+
+        .google-btn:hover {
+            background: #334155;
+            border-color: #475569;
+        }
+
+        .google-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .error-msg {
+            font-size: 13px;
+            color: #ef4444;
+            margin-top: 8px;
+            text-align: center;
+            min-height: 20px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: #0f172a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 3000;
+            gap: 16px;
+            transition: opacity 0.5s;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(37, 99, 235, 0.1);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .custom-marker {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border: 2px solid white;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .custom-marker:hover {
+            transform: scale(1.15);
+            z-index: 1000 !important;
+        }
+
+        .custom-marker svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+
+        .marker-cluster-small,
+        .marker-cluster-medium,
+        .marker-cluster-large {
+            background-color: rgba(15, 23, 42, 0.6);
+            border-radius: 50%;
+        }
+
+        .marker-cluster div {
+            width: 36px;
+            height: 36px;
+            margin-left: 2px;
+            margin-top: 2px;
+            text-align: center;
+            border-radius: 50%;
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .marker-cluster-small div {
+            background-color: #3b82f6;
+        }
+
+        .marker-cluster-medium div {
+            background-color: #f59e0b;
+        }
+
+        .marker-cluster-large div {
+            background-color: #ef4444;
+        }
+
+        @media (max-width: 640px) {
+            .app-title {
+                top: 12px;
+                right: 12px;
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+
+            #user-status {
+                top: 12px;
+                bottom: auto;
+                left: 12px;
+                padding: 4px 12px 4px 4px;
+            }
+
+            #user-status button {
+                padding: 6px 14px;
+                font-size: 13px;
+            }
+
+            .geolocation-btn {
+                bottom: 24px;
+            }
+
+            .search-container {
+                top: 60px;
+                left: 12px;
+                width: 200px;
+            }
+        }
+
+        .search-container {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 2000;
+            background: var(--surface);
+            backdrop-filter: blur(var(--surface-blur));
+            -webkit-backdrop-filter: blur(var(--surface-blur));
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;
+            width: 300px;
+            transition: all 0.3s;
+        }
+
+        .search-input {
+            border: none;
+            outline: none;
+            padding: 8px;
+            font-size: 14px;
+            width: 100%;
+            background: transparent;
+            color: white;
+            border-radius: 8px;
+        }
+
+        .search-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            color: var(--text-secondary);
+        }
+
+        .search-btn:hover {
+            color: var(--primary);
+        }
+
+        .note-image {
+            width: 100%;
+            height: auto;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-top: 8px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .note-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #eee;
+        }
+
+        .like-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            transition: color 0.2s;
+        }
+
+        .like-btn.liked {
+            color: #ef4444;
+        }
+
+        .like-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        .like-btn.liked svg {
+            fill: currentColor;
+            stroke: none;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .delete-btn:hover {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        /* Leaflet Dark Fixes */
+        .leaflet-popup-content-wrapper,
+        .leaflet-popup-tip {
+            background-color: #1e293b !important;
+            color: #f8fafc !important;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow);
+        }
+
+        .leaflet-container a.leaflet-popup-close-button {
+            color: #94a3b8 !important;
+        }
+
+        .leaflet-container a.leaflet-popup-close-button:hover {
+            color: white !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="user-status">
+        <button id="openLoginBtn">Войти</button>
+    </div>
+    <div id="app-container">
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="spinner"></div>
+            <div style="font-size: 14px; color: #64748b; font-weight: 500;">Загрузка мира...</div>
+        </div>
+        <div class="app-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+            THPlace
+        </div>
+        <div class="search-container">
+            <input type="text" class="search-input" id="citySearch" placeholder="Поиск города..." />
+            <button class="search-btn" id="searchBtn">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="map"></div>
+        <button class="theme-btn" id="themeBtn" title="Сменить тему">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                </path>
+            </svg>
+        </button>
+        <button class="geolocation-btn" id="geolocateBtn" title="Где я?">
+            <svg viewBox="0 0 24 24">
+                <path
+                    d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+            </svg>
+        </button>
+        <div class="popup-backdrop" id="popupBackdrop"></div>
+        <div class="modal-window" id="thoughtPopup">
+            <h3 style="margin-bottom: 16px; font-size: 18px;">Новая мысль</h3>
+            <textarea class="form-textarea" id="thoughtInput" placeholder="О чем вы думаете здесь?"
+                autofocus></textarea>
+            <div class="form-group">
+                <label>КАРТИНКА (ЗАГРУЗИТЬ)</label>
+                <input type="file" id="imageInput" accept="image/*" class="form-input" style="padding: 10px;">
+                <input type="hidden" id="imageBase64">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Категория</label>
+                <select class="form-select" id="categorySelect">
+                    <option value="work">Работа</option>
+                    <option value="personal">Личное</option>
+                    <option value="idea">Идея</option>
+                    <option value="important">Важное</option>
+                    <option value="other" selected>Другое</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Автор</label>
+                <input type="text" class="form-input" id="authorInput" placeholder="Аноним">
+            </div>
+            <div class="error-msg" id="popupError"></div>
+            <div class="btn-group">
+                <button class="btn btn-secondary" id="cancelBtn">Отмена</button>
+                <button class="btn btn-primary" id="saveBtn">Разместить</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal-window" id="auth-modal">
+        <button class="close-btn" id="authCloseBtn">&times;</button>
+        <div class="auth-tabs">
+            <div class="auth-tab active" data-tab="login">Вход</div>
+            <div class="auth-tab" data-tab="register">Регистрация</div>
+        </div>
+        <div class="auth-tab-content" id="login-tab">
+            <form id="login-form">
+                <input type="email" id="login-email" class="form-input" placeholder="Email" required
+                    style="margin-bottom: 12px;">
+                <input type="password" id="login-password" class="form-input" placeholder="Пароль" required
+                    style="margin-bottom: 16px;">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Войти</button>
+                <div class="error-msg" id="login-error"></div>
+            </form>
+        </div>
+        <div class="auth-tab-content" id="register-tab" style="display: none;">
+            <form id="register-form">
+                <input type="text" id="register-nick" class="form-input" placeholder="Ваш Ник" required
+                    style="margin-bottom: 12px;">
+                <input type="email" id="register-email" class="form-input" placeholder="Email" required
+                    style="margin-bottom: 12px;">
+                <input type="password" id="register-password" class="form-input" placeholder="Пароль (мин. 6 символов)"
+                    required style="margin-bottom: 16px;">
+                <!-- reCAPTCHA v2 Widget -->
+                <div class="g-recaptcha" data-sitekey="6LcKk_4rAAAAAAoqKhPTx5XY0KH4sutXBRWfmElz"
+                    style="margin-bottom: 16px; display: none;"></div>
+                <button class="g-recaptcha btn btn-primary" data-sitekey="6LcKk_4rAAAAAAoqKhPTx5XY0KH4sutXBRWfmElz"
+                    data-callback='onRegisterSubmit' data-action='SIGN_UP' style="width: 100%;">
+                    Создать аккаунт
+                </button>
+                <div class="error-msg" id="register-error"></div>
+            </form>
+        </div>
+        <div class="auth-divider"><span>или</span></div>
+        <button class="google-btn" id="google-login-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+                <path fill="#EA4335"
+                    d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                <path fill="#4285F4"
+                    d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                <path fill="#FBBC05"
+                    d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                <path fill="#34A853"
+                    d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+            </svg>
+            <span>Продолжить с Google</span>
+        </button>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <script type="module">
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSvslpyciLeUll6ZAL9KXGGw4-siM_qtE",
+            authDomain: "thoughts-de270.firebaseapp.com",
+            databaseURL: "https://thoughts-de270-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "thoughts-de270",
+            storageBucket: "thoughts-de270.firebasestorage.app",
+            messagingSenderId: "944643706443",
+            appId: "1:944643706443:web:acf95bd30450899a08c7ce",
+            measurementId: "G-THDDT23GB0"
+        };
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import {
+            getDatabase, ref, push, onChildAdded, onValue, get, set, remove, onChildRemoved, update, onChildChanged, runTransaction
+        } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        import {
+            getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut,
+            createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile
+        } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getStorage, ref as sRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+        const app = initializeApp(firebaseConfig);
+        // Functions removed (Spark plan)
+        const storage = getStorage(app);
+        const database = getDatabase(app);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+        const thoughtsRef = ref(database, 'thoughts');
+        const bannedAuthorsRef = ref(database, 'admin/bannedAuthors');
+        let currentUser = null;
+        let map;
+        let markersCluster;
+        let clickedLatLng = null;
+        const markersMap = new Map();
+        const categoryConfig = {
+            work: { name: 'Работа', color: '#3b82f6' },
+            personal: { name: 'Личное', color: '#10b981' },
+            idea: { name: 'Идея', color: '#f59e0b' },
+            important: { name: 'Важное', color: '#ef4444' },
+            other: { name: 'Другое', color: '#8b5cf6' }
+        };
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
+        }
+
+        function setupAuth() {
+            const userStatus = document.getElementById('user-status');
+            onAuthStateChanged(auth, (user) => {
+                currentUser = user;
+                if (user) {
+                    const nick = user.displayName || 'Пользователь';
+                    // Escape nick here too
+                    userStatus.innerHTML = `<span>${escapeHTML(nick)}</span><button id="logoutBtn">Выйти</button>`;
+                    document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+                    closeModal('auth-modal');
+                } else {
+                    userStatus.innerHTML = `<button id="openLoginBtn">Войти</button>`;
+                    document.getElementById('openLoginBtn').addEventListener('click', () => openModal('auth-modal'));
+                }
+            });
+            const tabs = document.querySelectorAll('.auth-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.querySelectorAll('.auth-tab-content').forEach(c => c.style.display = 'none');
+                    document.getElementById(`${tab.dataset.tab}-tab`).style.display = 'block';
+                });
+            });
+            document.getElementById('authCloseBtn').addEventListener('click', () => closeModal('auth-modal'));
+            document.getElementById('login-form').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const err = document.getElementById('login-error');
+                err.textContent = '';
+                try {
+                    await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
+                } catch (e) { err.textContent = 'Ошибка входа: ' + e.message; }
+            });
+            // Global callback for reCAPTCHA
+            window.onRegisterSubmit = async function (token) {
+                const err = document.getElementById('register-error');
+                const btn = document.querySelector('#register-form button');
+                err.textContent = '';
+                btn.disabled = true;
+                btn.textContent = 'Проверка...';
+
+                try {
+                    // Client-Side Only Registration (Spark Plan)
+                    // We cannot verify reCAPTCHA score without backend.
+                    // We trust the widget stopped simple bots.
+                    const email = document.getElementById('register-email').value;
+                    const password = document.getElementById('register-password').value;
+                    const nick = document.getElementById('register-nick').value;
+
+                    if (!email || !password || !nick) {
+                        throw new Error('Заполните все поля');
+                    }
+
+                    // Create User directly
+                    const cred = await createUserWithEmailAndPassword(auth, email, password);
+                    await updateProfile(cred.user, { displayName: nick });
+                    window.location.reload();
+                } catch (e) {
+                    console.error(e);
+                    err.textContent = 'Ошибка: ' + (e.message || 'Unknown error');
+                    grecaptcha.enterprise.reset();
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Создать аккаунт';
+                }
+            };
+
+            // Prevent default form submission since button handles it
+            document.getElementById('register-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+            });
+            const googleBtn = document.getElementById('google-login-btn');
+            const newGoogleBtn = googleBtn.cloneNode(true);
+            googleBtn.parentNode.replaceChild(newGoogleBtn, googleBtn);
+            newGoogleBtn.addEventListener('click', async () => {
+                try {
+                    await signInWithPopup(auth, provider);
+                } catch (error) {
+                    console.error(error);
+                }
+            });
+        }
+        let currentTheme = localStorage.getItem('theme') || 'dark';
+        const darkTile = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        const lightTile = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        let tileLayer;
+
+        function applyTheme(theme) {
+            const root = document.documentElement;
+            if (theme === 'dark') {
+                root.style.setProperty('--bg-dark', '#0f172a');
+                root.style.setProperty('--surface', 'rgba(30, 41, 59, 0.7)');
+                root.style.setProperty('--text-main', '#f8fafc');
+                root.style.setProperty('--text-secondary', '#94a3b8');
+                if (tileLayer) tileLayer.setUrl(darkTile);
+            } else {
+                root.style.setProperty('--bg-dark', '#f8fafc');
+                root.style.setProperty('--surface', 'rgba(255, 255, 255, 0.92)');
+                root.style.setProperty('--text-main', '#0f172a');
+                root.style.setProperty('--text-secondary', '#64748b');
+                if (tileLayer) tileLayer.setUrl(lightTile);
+            }
+            localStorage.setItem('theme', theme);
+        }
+
+        function initMap() {
+            applyTheme(currentTheme);
+            map = L.map('map', {
+                attributionControl: false,
+                zoomControl: false,
+                worldCopyJump: true
+            }).setView([48.85, 2.35], 5);
+            L.control.attribution({ prefix: '' }).addTo(map);
+
+            tileLayer = L.tileLayer(currentTheme === 'dark' ? darkTile : lightTile, {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap, © CartoDB'
+            }).addTo(map);
+
+            markersCluster = L.markerClusterGroup({
+                showCoverageOnHover: false,
+                maxClusterRadius: 50,
+                iconCreateFunction: function (cluster) {
+                    const childCount = cluster.getChildCount();
+                    let c = 'marker-cluster-';
+                    if (childCount < 10) { c += 'small'; }
+                    else if (childCount < 100) { c += 'medium'; }
+                    else { c += 'large'; }
+                    return new L.DivIcon({
+                        html: '<div><span>' + childCount + '</span></div>',
+                        className: 'marker-cluster ' + c,
+                        iconSize: new L.Point(40, 40)
+                    });
+                }
+            });
+            map.addLayer(markersCluster);
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    map.setView([pos.coords.latitude, pos.coords.longitude], 13);
+                });
+            }
+            map.on('click', (e) => {
+                clickedLatLng = e.latlng;
+                openModal('thoughtPopup');
+            });
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+            }, 800);
+        }
+        function createMarkerIcon(category) {
+            const color = categoryConfig[category]?.color || categoryConfig.other.color;
+            return L.divIcon({
+                html: `
+                    <div class="custom-marker" style="background: ${color};">
+                        <svg viewBox="0 0 24 24">
+                           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </div>
+                `,
+                className: '',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18],
+                popupAnchor: [0, -10]
+            });
+        }
+        function addMarker(id, data) {
+            if (markersMap.has(id)) return;
+            const marker = L.marker([data.lat, data.lng], {
+                icon: createMarkerIcon(data.category)
+            });
+            marker.bindPopup(createPopupContent(id, data));
+            markersCluster.addLayer(marker);
+            markersMap.set(id, marker);
+        }
+        function createPopupContent(id, data) {
+            const dateStr = new Date(data.timestamp).toLocaleDateString('ru-RU', {
+                day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+            });
+            const likeCount = data.likes ? Object.keys(data.likes).length : 0;
+            const isLiked = currentUser && data.likes && data.likes[currentUser.uid];
+            const isOwner = currentUser && (data.uid === currentUser.uid);
+            let imageHtml = '';
+            if (data.image) {
+                imageHtml = `<img src="${data.image}" class="note-image" onerror="this.style.display='none'">`;
+            }
+            return `
+                <div style="min-width: 220px; font-family: 'Inter', sans-serif; color: white;">
+                    <div style="display:inline-block; padding: 2px 8px; border-radius: 99px; background:${categoryConfig[data.category]?.color || '#ccc'}; color:white; font-size:10px; font-weight:700; text-transform:uppercase; margin-bottom:6px;">
+                        ${escapeHTML(categoryConfig[data.category]?.name)}
+                    </div>
+                    ${imageHtml}
+                    <div style="font-size:14px; line-height:1.4; color:#f8fafc; margin-bottom:8px; word-wrap: break-word;">
+                        ${escapeHTML(data.text)}
+                    </div>
+                    <div style="font-size:11px; color:#94a3b8; display:flex; justify-content:space-between; margin-bottom: 8px;">
+                        <span>${dateStr}</span>
+                        <span style="font-weight:600;">${escapeHTML(data.author || 'Аноним')}</span>
+                    </div>
+                    <div class="note-actions">
+                        <button class="like-btn ${isLiked ? 'liked' : ''}" onclick="event.stopPropagation(); window.toggleLike('${id}', ${!!isLiked})">
+                            <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                            <span>${likeCount}</span>
+                        </button>
+                        ${isOwner ? `<button class="delete-btn" onclick="event.stopPropagation(); window.deleteNote('${id}')">Удалить</button>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        function openModal(id) {
+            document.getElementById(id).classList.add('active');
+            document.getElementById('popupBackdrop').classList.add('active');
+            if (id === 'thoughtPopup') {
+                const authorInp = document.getElementById('authorInput');
+                if (currentUser) {
+                    authorInp.value = currentUser.displayName;
+                    authorInp.readOnly = true;
+                } else {
+                    authorInp.value = localStorage.getItem('lastAuthor') || '';
+                    authorInp.readOnly = false;
+                }
+                document.getElementById('thoughtInput').focus();
+            }
+        }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            const activeModals = document.querySelectorAll('.modal-window.active');
+            if (activeModals.length === 0) {
+                document.getElementById('popupBackdrop').classList.remove('active');
+            }
+            document.getElementById('popupError').textContent = '';
+        }
+        document.getElementById('saveBtn').addEventListener('click', async () => {
+            const text = document.getElementById('thoughtInput').value.trim();
+            const image = document.getElementById('imageBase64').value; // Use processed Base64
+            const author = document.getElementById('authorInput').value.trim();
+            const cat = document.getElementById('categorySelect').value;
+            const btn = document.getElementById('saveBtn');
+            const err = document.getElementById('popupError');
+            if (!text) return;
+            if (!clickedLatLng) return;
+            btn.disabled = true;
+            btn.textContent = '...';
+            if (author) {
+                try {
+                    const banned = await get(bannedAuthorsRef);
+                    if (banned.exists() && banned.val()[author.toLowerCase()]) {
+                        err.textContent = 'Вы забанены.';
+                        btn.disabled = false;
+                        btn.textContent = 'Разместить';
+                        return;
+                    }
+                } catch (e) {
+                    // Если доступа к списку банов нет (обычный юзер), просто идем дальше.
+                    // Если автор реально в бане, Firebase отклонит сам push() позже.
+                    console.log('Ban check skipped due to permissions');
+                }
+                if (!currentUser) localStorage.setItem('lastAuthor', author);
+            }
+            try {
+                // Spark Plan: Save Base64 directly to DB
+                // Image is already compressed by the existing canvas logic above (max 800px, 0.7 quality)
+
+                await push(thoughtsRef, {
+                    lat: clickedLatLng.lat,
+                    lng: clickedLatLng.lng,
+                    text,
+                    image: image || null, // Save Base64 directly
+                    author,
+                    uid: currentUser ? currentUser.uid : null,
+                    category: cat,
+                    timestamp: Date.now()
+                });
+                document.getElementById('thoughtInput').value = '';
+                document.getElementById('imageInput').value = '';
+                closeModal('thoughtPopup');
+            } catch (e) {
+                console.error(e);
+                if (e.message.toLowerCase().includes('permission_denied') || e.code === 'PERMISSION_DENIED') {
+                    err.textContent = 'Ошибка доступа: Нужно войти в аккаунт';
+                } else {
+                    err.textContent = 'Ошибка сети: ' + e.message;
+                }
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Разместить';
+            }
+        });
+        document.getElementById('cancelBtn').addEventListener('click', () => closeModal('thoughtPopup'));
+        document.getElementById('popupBackdrop').addEventListener('click', () => {
+            closeModal('thoughtPopup');
+            closeModal('auth-modal');
+        });
+        document.getElementById('imageInput').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Compress image
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    const maxWidth = 800;
+                    const maxHeight = 800;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height *= maxWidth / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width *= maxHeight / height;
+                            height = maxHeight;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7); // Compress to 70% quality
+                    document.getElementById('imageBase64').value = dataUrl;
+                };
+            };
+        });
+
+        document.getElementById('geolocateBtn').addEventListener('click', () => {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition(pos => {
+                map.flyTo([pos.coords.latitude, pos.coords.longitude], 14);
+            });
+        });
+        document.getElementById('themeBtn').addEventListener('click', () => {
+            currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            applyTheme(currentTheme);
+        });
+        const path = window.location.pathname;
+        if (path.includes('caruno')) {
+            document.getElementById('app-container').style.display = 'none';
+        } else {
+            setupAuth();
+            initMap();
+            onChildAdded(thoughtsRef, (snap) => {
+                const val = snap.val();
+                if (val) addMarker(snap.key, val);
+            });
+            onChildRemoved(thoughtsRef, (snap) => {
+                const id = snap.key;
+                if (markersMap.has(id)) {
+                    markersCluster.removeLayer(markersMap.get(id));
+                    markersMap.delete(id);
+                }
+            });
+            onChildChanged(thoughtsRef, (snap) => {
+                const val = snap.val();
+                if (val && markersMap.has(snap.key)) {
+                    const marker = markersMap.get(snap.key);
+                    const content = createPopupContent(snap.key, val);
+                    marker.setPopupContent(content);
+                    // Update icon if category changed (optional but thorough)
+                    marker.setIcon(createMarkerIcon(val.category));
+                }
+            });
+        }
+        window.toggleLike = async (id, isCurrentlyLiked) => {
+            if (!currentUser) {
+                alert('Нужно войти, чтобы лайкать!');
+                return;
+            }
+            const likeRef = ref(database, `thoughts/${id}/likes/${currentUser.uid}`);
+            try {
+                // Optimistic logic: we know the current state from UI, so just toggle it.
+                // This avoids the 'get()' call which might trigger read permission issues or latency.
+                if (isCurrentlyLiked) {
+                    await remove(likeRef);
+                } else {
+                    await set(likeRef, true);
+                }
+            } catch (e) {
+                console.error("Like update failed: ", e);
+                if (e.message.includes('permission_denied')) {
+                    alert('Ошибка доступа. Убедитесь, что вы скопировали новые Правила базы данных из файла database.rules.json в консоль Firebase!');
+                }
+            }
+        };
+        window.deleteNote = async (id) => {
+            if (!confirm('Удалить эту мысль?')) return;
+            try {
+                await remove(ref(database, `thoughts/${id}`));
+            } catch (e) {
+                alert('Ошибка удаления: ' + e.message);
+            }
+        };
+        document.getElementById('searchBtn').addEventListener('click', performSearch);
+        document.getElementById('citySearch').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+        async function performSearch() {
+            const query = document.getElementById('citySearch').value.trim();
+            if (!query) return;
+            const btn = document.getElementById('searchBtn');
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '...';
+            try {
+                const resp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                const data = await resp.json();
+                if (data && data.length > 0) {
+                    const place = data[0];
+                    map.flyTo([place.lat, place.lon], 12);
+                } else {
+                    alert('Город не найден');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Ошибка поиска');
+            } finally {
+                btn.innerHTML = originalContent;
+            }
+        }
+    </script>
+</body>
+
+</html>

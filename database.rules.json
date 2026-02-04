@@ -1,0 +1,52 @@
+{
+  "rules": {
+    "thoughts": {
+      ".read": true,
+      ".indexOn": [
+        "uid",
+        "category"
+      ],
+      "$thought_id": {
+        ".write": "auth != null && ( ( !data.exists() && newData.child('uid').val() === auth.uid && !root.child('admin/bannedAuthors').child(auth.uid).exists() ) || ( data.exists() && newData.exists() && data.child('uid').val() === auth.uid && newData.child('uid').val() === auth.uid ) || ( data.exists() && !newData.exists() && data.child('uid').val() === auth.uid ) || auth.token.admin === true )",
+        "uid": {
+          ".validate": "newData.val() === auth.uid"
+        },
+        "text": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 500"
+        },
+        "image": {
+          ".validate": "!newData.exists() || (newData.isString() && newData.val().length <= 500000 && newData.val().matches(/^data:image\\/.+/))"
+        },
+        "category": {
+          ".validate": "newData.isString() && (newData.val() === 'work' || newData.val() === 'personal' || newData.val() === 'idea' || newData.val() === 'important' || newData.val() === 'other')"
+        },
+        "timestamp": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+        },
+        "lat": {
+          ".validate": "newData.isNumber()"
+        },
+        "lng": {
+          ".validate": "newData.isNumber()"
+        },
+        "author": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 30"
+        },
+        "likes": {
+          "$uid": {
+            ".write": "auth != null && $uid === auth.uid",
+            ".validate": "newData.val() === true"
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "admin": {
+      ".read": "auth.token.admin === true",
+      ".write": "auth.token.admin === true",
+      "bannedAuthors": {}
+    }
+  }
+}
